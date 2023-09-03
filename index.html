@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <title>Online Taboo</title>
+    <!-- ICONS -->
+    <script src="https://kit.fontawesome.com/6316116050.js" crossorigin="anonymous"></script>
+</head>
+<body>
+    <div class="lobby-name">ERDEM LOBISI</div>
+    <div class="invite-btn">Davet Et</div>
+
+    <div class="invite-alert-box">Davet Linki Kopyalandı!</div>
+
+    <div class="start-container">
+        <div class="start-box">
+            <label>İSMİNİZ</label>
+            <input type="text" class="username-input input">
+            <label class="password-label">ŞİFRE</label>
+            <input type="password" class="password-input input">
+
+            <div class="start-box-footer">
+                <div class="join-lobby-btn"><div>Lobiye Katıl!</div></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="game-container">
+        <div class="team-box red-team">
+            <div class="team-title">kırmızı takım</div>
+
+            <div class="players-area red-players-area">
+                <div class="player-div red-player-div"><div class="player-name">Erdem</div></div>
+                <div class="player-div empty-player-div">
+                    <div class="empty-title">BOŞ SLOT</div>
+                    <div class="empty-desc">bu takıma katılabilirsin</div>
+                </div>
+                <div class="player-div empty-player-div">
+                    <div class="empty-title">BOŞ SLOT</div>
+                    <div class="empty-desc">bu takıma katılabilirsin</div>
+                </div>
+                <div class="player-div empty-player-div">
+                    <div class="empty-title">BOŞ SLOT</div>
+                    <div class="empty-desc">bu takıma katılabilirsin</div>
+                </div>
+                <div class="player-div empty-player-div">
+                    <div class="empty-title">BOŞ SLOT</div>
+                    <div class="empty-desc">bu takıma katılabilirsin</div>
+                </div>
+            </div>
+
+            <div class="join-team-btn join-red-btn" data-team="0"><div>kırmızı takıma katıl</div></div>
+        </div>
+
+        <div class="container-mid">
+            <div class="score-board">
+                <div class="red-square square"></div>
+                <div class="red-score score">4</div>
+
+                <div class="blue-score score">2</div>
+                <div class="blue-square square"></div>
+            </div>
+            <div class="timer-div"><div class="time">00:48</div></div>
+
+            <div class="card-div">
+                <div class="card-header">***</div>
+
+                <div class="card-line"></div>
+
+                <div class="card-words">
+                </div>
+            </div>
+
+            <div class="buttons">
+                <div class="correct-btn btn">Doğru</div>
+                <div class="skip-btn btn">Pas (3)</div>
+                <div class="faul-btn btn">Faul!</div>
+            </div>
+        </div>
+
+        <div class="lobby-mid">
+            <div class="start-btn"><div>Oyunu Başlat</div></div>
+            <!-- <div class="join-spectator-btn"><div>Tarafsız Takıma Geç!</div></div> -->
+        </div>
+
+        <div class="team-box blue-team">
+            <div class="team-title">mavi takım</div>
+
+            <div class="players-area blue-players-area">
+                <div class="player-div blue-player-div"><div class="player-name">Ergin</div></div>
+                <div class="player-div blue-player-div"><div class="player-name">Zeynep</div></div>
+                <div class="player-div empty-player-div">
+                    <div class="empty-title">BOŞ SLOT</div>
+                    <div class="empty-desc">bu takıma katılabilirsin</div>
+                </div>
+                <div class="player-div empty-player-div">
+                    <div class="empty-title">BOŞ SLOT</div>
+                    <div class="empty-desc">bu takıma katılabilirsin</div>
+                </div>
+                <div class="player-div empty-player-div">
+                    <div class="empty-title">BOŞ SLOT</div>
+                    <div class="empty-desc">bu takıma katılabilirsin</div>
+                </div>
+            </div>
+
+            <div class="join-team-btn join-blue-btn" data-team="1"><div>mavi takıma katıl</div></div>
+        </div>
+    </div>
+<script src="./game.js"></script>
+</body>
+</html>
