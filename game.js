@@ -2,6 +2,13 @@ const containerMid = document.querySelector('.container-mid');
 const lobbyMid = document.querySelector('.lobby-mid');
 const startContainer = document.querySelector('.start-container');
 const gameContainer = document.querySelector('.game-container');
+const gamePage = document.querySelector('.game-page');
+const lobbiesContainer = document.querySelector('.lobbies-container');
+
+const lobbiesArea = document.querySelector('.lobbies-area');
+const turnBackLobbiesBtn = document.querySelector('.turn-back-lobbies-btn');
+
+const headerTitle = document.querySelector('.lobby-name');
 
 const inviteBtn = document.querySelector('.invite-btn');
 const inviteModal = document.querySelector('.invite-alert-box');
@@ -20,16 +27,101 @@ const joinLobbyBtn = document.querySelector('.join-lobby-btn');
 
 const joinTeamBtns = document.querySelectorAll('.join-team-btn');
 
-class Lobby {
-    title = 'ERDEM';
-    password = "123456";
+let lobbyDIVS;
+let lobbyIndex;
 
-    admin = "Erdem";
+class Lobbies {
+    lobbies = [
+        {
+            title: 'Erdem',
+            admin: 'Erdem',
+            password: '1',
+            hasPassword: true,
+            description: 'discord.gg/xxx',
+            currentPlayer: 3,
+            lobbyID: 0,
+            players: ["Ergin", "Zeynep", "Erdem"],
+            redTeam: ["Ergin", "Zeynep"],
+            blueTeam: ["Erdem"],
+        },
+
+        {
+            title: 'Ergin',
+            admin: 'a',
+            password: '123456',
+            hasPassword: true,
+            description: 'discord.gg/abcd',
+            currentPlayer: 1,
+            lobbyID: 0,
+            players: ["Ergin"],
+            redTeam: ["Ergin"],
+            blueTeam: [],
+        },
+    ];
+
+    initLobbiesContainer = () => {
+        startContainer.style.display = "none";
+        gameContainer.style.display = "none";
+        lobbyMid.style.display = "none";
+        containerMid.style.display = "none";
+
+        inviteBtn.style.display = "none";
+        headerTitle.textContent = "Online Taboo Game";
+
+        this.lobbies.map((lobby) => {
+            let div = document.createElement('div');
+            div.className = "lobby-item";
+
+            div.innerHTML = `
+            <div class="item-left">
+                <div class="item-name">${lobby.title} ${lobby.hasPassword ? "<div class='lock-icon'><i class='fa-solid fa-lock'></i></div>" : ""}</div>
+                <div class="item-desc">${lobby.description}</div>
+            </div>
+
+            <div class="item-right">${lobby.currentPlayer}/10</div>
+            `;
+
+            lobbiesArea.appendChild(div);
+        });
+
+        lobbyDIVS = document.querySelectorAll('.lobby-item');
+    }
+}
+
+const lobbies = new Lobbies();
+
+lobbies.initLobbiesContainer();
+
+lobbyDIVS.forEach((div, index) => {
+    div.addEventListener('click', () => {
+        lobbyIndex = index;
+
+        lobby.title = lobbies.lobbies[index].title;
+        lobby.password = lobbies.lobbies[index].password;
+        lobby.admin = lobbies.lobbies[index].admin;
+        lobby.allPlayers = lobbies.lobbies[index].players;
+
+        headerTitle.textContent = `${lobby.title} LOBISI`;
+
+        lobby.currentLobby = lobbies.lobbies[index];
+
+        lobbiesContainer.style.display = "none";
+        startContainer.style.display = "flex";
+    });
+});
+
+class Lobby {
+    title = null;
+    password = null;
+
+    currentLobby;
+
+    admin = null;
 
     currentPlayingTeam = 0;
     currentPlayingUserIndex = 0;
 
-    allPlayers = ["Ergin", "Zeynep"];
+    allPlayers = null;
 }
 
 const lobby = new Lobby();
@@ -255,9 +347,16 @@ class Game {
                             this.blueTeam.players.splice(index, 1);
                         }
                     });
+
+                    lobby.currentLobby.blueTeam.map((player, index) => {
+                        if(player == this.username) {
+                            lobby.currentLobby.blueTeam.splice(index, 1);
+                        }
+                    });
                 }
 
                 this.redTeam.players.push(this.username);
+                // lobby.currentLobby.redTeam.push(this.username);
                 this.isOnTeam = true;
                 this.userTeam = 0;
                 this.enemyTeam = 1;
@@ -273,15 +372,22 @@ class Game {
                             this.redTeam.players.splice(index, 1);
                         }
                     });
+
+                    lobby.currentLobby.redTeam.map((player, index) => {
+                        if(player == this.username) {
+                            lobby.currentLobby.redTeam.splice(index, 1);
+                        }
+                    });
                 }
 
                 this.blueTeam.players.push(this.username);
+                // lobby.currentLobby.blueTeam.push(this.username);
                 this.isOnTeam = true;
                 this.userTeam = 1;
                 this.enemyTeam = 0;
 
                 joinTeamBtns[this.enemyTeam].classList.remove('disabled-btn');
-                joinTeamBtns[this.currentTeam].classList.add('disabled-btn');
+                joinTeamBtns[this.userTeam].classList.add('disabled-btn');
 
                 this.initBoxes();
             }
@@ -387,10 +493,17 @@ class Game {
             startGameBtn.style.display = "none";
         }
 
+        headerTitle.textContent = `${lobby.title} LOBISI`;
         containerMid.style.display = "none";
         gameContainer.style.display = "flex";
         startContainer.style.display = "none";
         lobbyMid.style.display = "flex";
+
+
+        this.redTeam.players = lobby.currentLobby.redTeam;
+        this.blueTeam.players = lobby.currentLobby.blueTeam;
+
+        this.initBoxes();
     }
 
     initGame = () => {
@@ -423,7 +536,6 @@ class Game {
 }
 
 const game = new Game();
-game.initStart();
 
 startGameBtn.addEventListener('click', game.startGame);
 
@@ -467,6 +579,8 @@ joinLobbyBtn.addEventListener('click', () => {
     if(passwordInput.value == lobby.password && usernameInput.value != "" && isUsernameAvailable) {
         game.username = usernameInput.value;
         lobby.allPlayers.push(game.username);
+        lobby.currentLobby.currentPlayer += 1;
+        lobby.currentLobby.players.push(game.username);
         game.initLobby();
     }
 });
@@ -474,3 +588,8 @@ joinLobbyBtn.addEventListener('click', () => {
 joinTeamBtns.forEach((btn) => {
     btn.addEventListener('click', game.joinTeam);
 });
+
+turnBackLobbiesBtn.addEventListener('click', () => {
+    lobbiesContainer.style.display = "flex";
+    startContainer.style.display = "none";
+})
