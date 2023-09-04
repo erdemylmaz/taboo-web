@@ -61,7 +61,7 @@ font-weight: 600;
 }
 
 .game-container {
-display: flex;
+display: none;
 flex-direction: row;
 margin-top: 24px;
 }
@@ -195,7 +195,7 @@ color: #fff;
 
 .container-mid {
 width: 432px;
-display: flex;
+display: none;
 flex-direction: column;
 align-items: center;
 }
@@ -494,7 +494,7 @@ label {
 .lobbies-container {
     width: 900px;
     margin-top: 24px;
-    display: flex;
+    display: none;
     flex-direction: column;
     align-items: center;
 }

@@ -1,8 +1,34 @@
+// DATABASE
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.3.1/firebase-app.js";
+import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.3.1/firebase-analytics.js";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyAg-fVSZIXm0Rbxpw8DF3_Zz9zoXuipuCA",
+  authDomain: "taboo-web.firebaseapp.com",
+  projectId: "taboo-web",
+  storageBucket: "taboo-web.appspot.com",
+  messagingSenderId: "752739071752",
+  appId: "1:752739071752:web:1cd9decaacbd6eca86debd",
+  measurementId: "G-N6DLNHV8M0"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
+
+import {getDatabase, set, get, ref, child, update, remove} from "https://www.gstatic.com/firebasejs/10.3.1/firebase-database.js";
+
+const db = getDatabase();
+
 const containerMid = document.querySelector('.container-mid');
 const lobbyMid = document.querySelector('.lobby-mid');
 const startContainer = document.querySelector('.start-container');
 const gameContainer = document.querySelector('.game-container');
-const gamePage = document.querySelector('.game-page');
 const lobbiesContainer = document.querySelector('.lobbies-container');
 
 const lobbiesArea = document.querySelector('.lobbies-area');
@@ -21,111 +47,18 @@ const timeDiv = document.querySelector('.time')
 const cardHeader = document.querySelector('.card-header');
 const cardWordsArea = document.querySelector('.card-words');
 
+const redBoxArea = document.querySelector('.red-players-area');
+const blueBoxArea = document.querySelector('.blue-players-area');
+
 const usernameInput = document.querySelector('.username-input');
 const passwordInput = document.querySelector('.password-input');
 const joinLobbyBtn = document.querySelector('.join-lobby-btn');
 
 const joinTeamBtns = document.querySelectorAll('.join-team-btn');
 
-let lobbyDIVS;
-let lobbyIndex;
-
-class Lobbies {
-    lobbies = [
-        {
-            title: 'Erdem',
-            admin: 'Erdem',
-            password: '1',
-            hasPassword: true,
-            description: 'discord.gg/xxx',
-            currentPlayer: 3,
-            lobbyID: 0,
-            players: ["Ergin", "Zeynep", "Erdem"],
-            redTeam: ["Ergin", "Zeynep"],
-            blueTeam: ["Erdem"],
-        },
-
-        {
-            title: 'Ergin',
-            admin: 'a',
-            password: '123456',
-            hasPassword: true,
-            description: 'discord.gg/abcd',
-            currentPlayer: 1,
-            lobbyID: 0,
-            players: ["Ergin"],
-            redTeam: ["Ergin"],
-            blueTeam: [],
-        },
-    ];
-
-    initLobbiesContainer = () => {
-        startContainer.style.display = "none";
-        gameContainer.style.display = "none";
-        lobbyMid.style.display = "none";
-        containerMid.style.display = "none";
-
-        inviteBtn.style.display = "none";
-        headerTitle.textContent = "Online Taboo Game";
-
-        this.lobbies.map((lobby) => {
-            let div = document.createElement('div');
-            div.className = "lobby-item";
-
-            div.innerHTML = `
-            <div class="item-left">
-                <div class="item-name">${lobby.title} ${lobby.hasPassword ? "<div class='lock-icon'><i class='fa-solid fa-lock'></i></div>" : ""}</div>
-                <div class="item-desc">${lobby.description}</div>
-            </div>
-
-            <div class="item-right">${lobby.currentPlayer}/10</div>
-            `;
-
-            lobbiesArea.appendChild(div);
-        });
-
-        lobbyDIVS = document.querySelectorAll('.lobby-item');
-    }
-}
-
-const lobbies = new Lobbies();
-
-lobbies.initLobbiesContainer();
-
-lobbyDIVS.forEach((div, index) => {
-    div.addEventListener('click', () => {
-        lobbyIndex = index;
-
-        lobby.title = lobbies.lobbies[index].title;
-        lobby.password = lobbies.lobbies[index].password;
-        lobby.admin = lobbies.lobbies[index].admin;
-        lobby.allPlayers = lobbies.lobbies[index].players;
-
-        headerTitle.textContent = `${lobby.title} LOBISI`;
-
-        lobby.currentLobby = lobbies.lobbies[index];
-
-        lobbiesContainer.style.display = "none";
-        startContainer.style.display = "flex";
-    });
-});
-
-class Lobby {
-    title = null;
-    password = null;
-
-    currentLobby;
-
-    admin = null;
-
-    currentPlayingTeam = 0;
-    currentPlayingUserIndex = 0;
-
-    allPlayers = null;
-}
-
-const lobby = new Lobby();
-
+const correctBtn = document.querySelector('.correct-btn');
+const skipBtn = document.querySelector('.skip-btn');
+const faulBtn = document.querySelector('.faul-btn');
 
 class Words {
     // make words capitalized
@@ -300,166 +233,272 @@ words.words.map((word) => {
     });
 });
 
-class Game {
-    username;
-    isOnTeam = false;
+class Lobby {
+    title = 'Erdem';
+    password = "";
+    admin = "admin";
+
+    players = [];
+
+    teams = [
+        {
+            players: [],
+            score: 0,
+        },
+        {
+            players: [],
+            score: 0,
+        },
+    ];
+
+    currentWordIndex = null;
+
+    currentPlayingTeam = 0;
+    currentPlayingIndex = 0;
+
+    gameTime = 120;
+    currentTime = 120;
+
     isGameOn = false;
 
-    gameTime = 90;
-    currentTime = 90;
-
-    userTeam = null;
-    enemyTeam = null;
-
-    redTeam = {
-        players: [],
-        score: 0,
-    };
-
-    blueTeam = {
-        players: ["Ergin", "Zeynep", "Emre", "Semih", "Hakan"],
-        score: 0,
-    };
-
     usedIndexes = [];
+}
 
-    invite = () => {
-        inviteModal.style.transform = "translateY(0px)";
-        inviteModal.textContent = 'Davet Linki Kopyalandı!';
+const lobby = new Lobby();
 
-        let URL = document.URL;
+class Game {
+    username = null;
+    team = null;
+    enemyTeam = 0;
 
-        navigator.clipboard.writeText(URL);
 
-        setTimeout(() => {
-            inviteModal.style.transform = "translateY(-128px)";
-        }, 2000);
+    initGameContainer = () => {
+        gameContainer.style.display = "flex";
+        startContainer.style.display = "none";
     }
 
-    joinTeam = (e) => {
-        if(!this.isGameOn) {
-            let team = e.currentTarget.dataset.team;
+    joinLobby = () => {
+        let usernameValue = usernameInput.value;
+        let passwordValue = passwordInput.value;
+        let canUseUsername = true;
 
-            if(team == 0 && this.userTeam != 0 && this.redTeam.players.length < 5) {
-                if(this.isOnTeam) {
-                    this.blueTeam.players.map((player, index) => {
-                        if(player == this.username) {
-                            this.blueTeam.players.splice(index, 1);
-                        }
-                    });
+        if(usernameValue == "") {
+            inviteModal.textContent = `Lutfen isminizi giriniz`;
+            inviteModal.style.transform = "translateY(0)";
 
-                    lobby.currentLobby.blueTeam.map((player, index) => {
-                        if(player == this.username) {
-                            lobby.currentLobby.blueTeam.splice(index, 1);
-                        }
-                    });
-                }
+            canUseUsername = false;
 
-                this.redTeam.players.push(this.username);
-                // lobby.currentLobby.redTeam.push(this.username);
-                this.isOnTeam = true;
-                this.userTeam = 0;
-                this.enemyTeam = 1;
+            setTimeout(() => {
+                inviteModal.style.transform = "translateY(-128px)";
+            }, 3000);
+        } else if (passwordValue != lobby.password) {
+            inviteModal.textContent = `Sifre hatali!`;
+            inviteModal.style.transform = "translateY(0)";
 
-                joinTeamBtns[this.userTeam].classList.add('disabled-btn');
-                joinTeamBtns[this.enemyTeam].classList.remove('disabled-btn');
-
-                this.initBoxes();
-            } else if(team == 1 && this.userTeam != 1 && this.blueTeam.players.length < 5) {
-                if(this.isOnTeam) {
-                    this.redTeam.players.map((player, index) => {
-                        if(player == this.username) {
-                            this.redTeam.players.splice(index, 1);
-                        }
-                    });
-
-                    lobby.currentLobby.redTeam.map((player, index) => {
-                        if(player == this.username) {
-                            lobby.currentLobby.redTeam.splice(index, 1);
-                        }
-                    });
-                }
-
-                this.blueTeam.players.push(this.username);
-                // lobby.currentLobby.blueTeam.push(this.username);
-                this.isOnTeam = true;
-                this.userTeam = 1;
-                this.enemyTeam = 0;
-
-                joinTeamBtns[this.enemyTeam].classList.remove('disabled-btn');
-                joinTeamBtns[this.userTeam].classList.add('disabled-btn');
-
-                this.initBoxes();
-            }
+            setTimeout(() => {
+                inviteModal.style.transform = "translateY(-128px)";
+            }, 3000);
         }
 
 
+        if(lobby.players.indexOf(usernameValue) != -1) {
+            canUseUsername = false;
+
+            inviteModal.textContent = `Lutfen baska bir isim giriniz!`;
+            inviteModal.style.transform = "translateY(0)";
+
+            setTimeout(() => {
+                inviteModal.style.transform = "translateY(-128px)";
+            }, 3000);
+        }
+
+        if(canUseUsername && passwordValue == lobby.password) {
+            this.username = usernameValue;
+            lobby.players.push(usernameValue);
+
+            this.initGameContainer();
+
+            if(this.username == lobby.admin) {
+                startGameBtn.style.display = "flex";
+            } else {
+                startGameBtn.style.display = "none";
+            }
+
+            this.updateDatabase();
+        }
+        
     }
 
-    initBoxes = () => {
-        // INIT RED BOX
-        let redPlayerArea = document.querySelector('.red-players-area');
-        redPlayerArea.innerHTML = '';
-        let redTeamLength = this.redTeam.players.length;
+    updateBoxes = () => {
+        redBoxArea.innerHTML = ``;
+        blueBoxArea.innerHTML = ``;
 
-        this.redTeam.players.map((player) => {
-            let div = document.createElement('div');
-            div.className = "player-div red-player-div";
+        let redCount = 5 - lobby.teams[0].players.length;
+        let blueCount = 5 - lobby.teams[1].players.length;
 
-            div.innerHTML = `<div class="player-name">${player} ${player == this.username ? "<span class='you-text'>(Siz)</span>" : ""} ${player == lobby.admin ? '<i class="fa-solid fa-crown"></i>' : ''}</div>`;
+        lobby.teams.map((team, index) => {
+            team.players.map((player) => {
+                let div = document.createElement('div');
+                div.className = "player-div";
 
-            redPlayerArea.appendChild(div);
+                if(index == 0) {
+                    div.classList.add('red-player-div');
+                } else {
+                    div.classList.add('blue-player-div');
+                }
+
+                div.innerHTML = `<div class='player-name'>${player} ${player == this.username ? "<span class = 'you-text'>(Siz)</span>" : ""} ${player == lobby.admin ? '<i class="fas fa-crown"></i>' : ""}</div>`;
+
+
+                if(index == 0) {
+                    redBoxArea.appendChild(div);
+                } else {
+                    blueBoxArea.appendChild(div);
+                }
+            });
         });
-
-        let redCount = 5 - redTeamLength;
 
         for(let x = 0; x < redCount; x++) {
             let div = document.createElement('div');
             div.className = "player-div empty-player-div";
 
             div.innerHTML = `
-            <div class="empty-title">BOŞ SLOT</div>
-            <div class="empty-desc">bu takıma katılabilirsin</div>`;
+                <div class="empty-title">BOŞ SLOT</div>
+                <div class="empty-desc">bu takıma katılabilirsin</div>
+            `;
 
-            redPlayerArea.appendChild(div);
+            redBoxArea.appendChild(div);
         }
-
-        // INIT BLUE BOX
-        let bluePlayerArea = document.querySelector('.blue-players-area');
-        bluePlayerArea.innerHTML = '';
-        let blueTeamLength = this.blueTeam.players.length;
-
-        this.blueTeam.players.map((player) => {
-            let div = document.createElement('div');
-            div.className = "player-div blue-player-div";
-
-            div.innerHTML = `<div class="player-name">${player} ${player == this.username ? "<span class='you-text'>(Siz)</span>" : ""} ${player == lobby.admin ? '<i class="fa-solid fa-crown"></i>' : ''}</div>`;
-
-            bluePlayerArea.appendChild(div);
-        });
-
-        let blueCount = 5 - blueTeamLength;
 
         for(let x = 0; x < blueCount; x++) {
             let div = document.createElement('div');
             div.className = "player-div empty-player-div";
 
             div.innerHTML = `
-            <div class="empty-title">BOŞ SLOT</div>
-            <div class="empty-desc">bu takıma katılabilirsin</div>`;
+                <div class="empty-title">BOŞ SLOT</div>
+                <div class="empty-desc">bu takıma katılabilirsin</div>
+            `;
 
-            bluePlayerArea.appendChild(div);
+            blueBoxArea.appendChild(div);
+        }
+    }
+
+    joinTeam = (e) => {
+        if(!lobby.isGameOn) {
+            let joiningTeam = e.currentTarget.dataset.team; 
+
+            if(joiningTeam == 0) {
+                this.enemyTeam = 1;
+            } else {
+                this.enemyTeam = 0;
+            }
+
+            if(this.team != joiningTeam && lobby.teams[joiningTeam].players.length < 5) {
+                this.team = joiningTeam;
+                lobby.teams[joiningTeam].players.push(this.username);
+
+                lobby.teams[this.enemyTeam].players.map((player, index) => {
+                    if(player == this.username) {
+                        lobby.teams[this.enemyTeam].players.splice(index, 1);
+                    }
+                });
+
+                joinTeamBtns[this.enemyTeam].classList.remove('disabled-btn');
+                joinTeamBtns[joiningTeam].classList.add('disabled-btn');
+            } else {
+                joinLobbyBtn[joiningTeam].classList.add('disabled-btn');
+            }
+
+            this.updateDatabase();
+        }
+    }
+
+    updateDatabase = () => {
+        let configurations = {
+            title: lobby.title,
+            admin: lobby.admin,
+            password: lobby.password,
+            teams: lobby.teams,
+            players: lobby.players,
+            currentPlayingTeam: lobby.currentPlayingTeam,
+            currentPlayingIndex: lobby.currentPlayingIndex,
+            isGameOn: lobby.isGameOn,
+            currentTime: lobby.currentTime,
+            gameTime: lobby.gameTime,
         }
 
-        // INIT JOIN BUTTONS
-
-        if(this.redTeam.players.length == 5) {
-            joinTeamBtns[0].classList.add('disabled-btn');
+        if(lobby.usedIndexes) {
+            configurations.usedIndexes = lobby.usedIndexes;
+            configurations.currentWordIndex = lobby.currentWordIndex;
         }
 
-        if(this.blueTeam.players.length == 5) {
-                joinTeamBtns[1].classList.add('disabled-btn');
+        set(ref(db, "Game/Lobby"), configurations).catch((err) => {
+            console.log(err);
+        });
+    }
+
+    updateCard = () => {
+        if(lobby.isGameOn) {
+            let word = words.words[lobby.currentWordIndex];
+
+            cardHeader.textContent = word.word;
+            cardWordsArea.innerHTML = ``;
+
+            word.tabuuWords.map((word) => {
+                let div = document.createElement('div');
+                div.className = "card-word";
+
+                div.textContent = word;
+
+                cardWordsArea.appendChild(div);
+            });
         }
+    }
+
+    updateFromDatabase = () => {
+        get(ref(db, "Game/Lobby")).then((snapshot) => {
+            let result = snapshot.val();
+            lobby.currentPlayingIndex = result.currentPlayingIndex;
+            lobby.currentPlayingTeam = result.currentPlayingTeam;
+            lobby.players = result.players;
+            lobby.teams = result.teams;
+            lobby.currentTime = result.currentTime;
+            lobby.usedIndexes = result.usedIndexes;
+            lobby.currentWordIndex = result.currentWordIndex;
+
+
+            if(!lobby.players) {
+                lobby.players = [];
+            }
+
+            if(!lobby.teams[0].players) {
+                lobby.teams[0].players = [];
+            }
+
+            if(!lobby.teams[1].players) {
+                lobby.teams[1].players = [];
+            }
+        }).catch((err) => {
+            console.log(err);
+        });
+    }
+
+    removeUser = () => {
+        lobby.players.map((player, index) => {
+            if(player == this.username) {
+                lobby.players.splice(index, 1);
+            }
+        });
+
+        lobby.teams.map((team) => {
+            team.players.map((player, index) => {
+                if(player == this.username) {
+                    team.players.splice(index, 1);
+                }
+            });
+        });
+
+        this.updateDatabase();
     }
 
     nextWord = () => {
@@ -467,129 +506,44 @@ class Game {
 
         do{
             randomNumber = Math.floor(Math.random() * words.words.length);
-        } while(this.usedIndexes.indexOf(randomNumber) != -1);
+        } while(lobby.usedIndexes.indexOf(randomNumber) != -1);
 
-        let randomWord = words.words[randomNumber];
+        lobby.currentWordIndex = randomNumber;
+        lobby.usedIndexes.push(randomNumber);
 
-        cardHeader.textContent = randomWord.word;
+        let word = words.words[randomNumber];
 
-        randomWord.tabuuWords.map((word) => {
+        cardHeader.textContent = word.word;
+
+        cardWordsArea.innerHTML = ``;
+
+        word.tabuuWords.map((word) => {
             let div = document.createElement('div');
             div.className = "card-word";
+
             div.textContent = word;
 
             cardWordsArea.appendChild(div);
         });
-    }
 
-    addExtraZero = (x) => {
-        return x < 10 ? "0" + x : x;
-    }
-
-    initLobby = () => {
-        if(this.username == lobby.admin) {
-            startGameBtn.style.display = "flex";
-        } else {
-            startGameBtn.style.display = "none";
-        }
-
-        headerTitle.textContent = `${lobby.title} LOBISI`;
-        containerMid.style.display = "none";
-        gameContainer.style.display = "flex";
-        startContainer.style.display = "none";
-        lobbyMid.style.display = "flex";
-
-
-        this.redTeam.players = lobby.currentLobby.redTeam;
-        this.blueTeam.players = lobby.currentLobby.blueTeam;
-
-        this.initBoxes();
-    }
-
-    initGame = () => {
-        scoreAreas[0].textContent = this.redTeam.score;
-        scoreAreas[1].textContent = this.blueTeam.score;
-
-        timeDiv.textContent = `${this.addExtraZero(Math.floor(this.gameTime / 60))}:${this.addExtraZero(Math.floor(this.gameTime % 60))}`;
-        this.nextWord();
-    }
-
-    startGame = () => {
-        this.initGame();
-        this.isGameOn = true;
-
-        joinTeamBtns.forEach((btn) => {
-            btn.classList.add('disabled-btn');
-        })
-
-        containerMid.style.display = "flex";
-        lobbyMid.style.display = "none";
-    }
-
-    initStart = () => {
-        gameContainer.style.display = "none";
-        lobbyMid.style.display = "none";
-        startContainer.style.display = "flex";
-
-        this.initBoxes();
+        this.updateDatabase();
     }
 }
 
 const game = new Game();
 
-startGameBtn.addEventListener('click', game.startGame);
+joinLobbyBtn.addEventListener('click', game.joinLobby);
 
-inviteBtn.addEventListener('click', game.invite);
+headerTitle.textContent = lobby.title + " Lobisi";
 
-joinLobbyBtn.addEventListener('click', () => {
-    if(passwordInput.value != lobby.password) {
-        inviteModal.style.transform = "translateY(0px)";
-        inviteModal.textContent = `Şifre Yanlış!`
-
-        setTimeout(() => {
-            inviteModal.style.transform = "translateY(-128px)";
-        }, 3000);
-    } else if(usernameInput.value == "") {
-        inviteModal.style.transform = "translateY(0px)";
-        inviteModal.textContent = `Lütfen İsminizi Giriniz!`
-
-        setTimeout(() => {
-            inviteModal.style.transform = "translateY(-128px)";
-        }, 3000);
-    }
-
-    let isUsernameAvailable = true;
-
-    lobby.allPlayers.map((player) => {
-        if(player.toLowerCase() == usernameInput.value.toLowerCase()) {
-            isUsernameAvailable = false;
-        }
-    });
-
-    if(!isUsernameAvailable) {
-        inviteModal.style.transform = "translateY(0px)";
-        inviteModal.textContent = `Lütfen Başka Bir İsim Giriniz!`
-
-        setTimeout(() => {
-            inviteModal.style.transform = "translateY(-128px)";
-        }, 3000);
- 
-    }
-
-    if(passwordInput.value == lobby.password && usernameInput.value != "" && isUsernameAvailable) {
-        game.username = usernameInput.value;
-        lobby.allPlayers.push(game.username);
-        lobby.currentLobby.currentPlayer += 1;
-        lobby.currentLobby.players.push(game.username);
-        game.initLobby();
-    }
-});
+setInterval(game.updateBoxes, 1000);
+setInterval(game.updateCard, 1000);
+setInterval(game.updateFromDatabase, 1000);
 
 joinTeamBtns.forEach((btn) => {
     btn.addEventListener('click', game.joinTeam);
 });
 
-turnBackLobbiesBtn.addEventListener('click', () => {
-    lobbiesContainer.style.display = "flex";
-    startContainer.style.display = "none";
-})
+
+// CHECK IS USER CLOSED WINDOW
+window.addEventListener('beforeunload', game.removeUser);
