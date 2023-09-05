@@ -39,11 +39,20 @@ const headerTitle = document.querySelector('.lobby-name');
 const inviteBtn = document.querySelector('.invite-btn');
 const inviteModal = document.querySelector('.invite-alert-box');
 
+const lobbyText = document.querySelector('.lobby-text');
+const joinTeamText = document.querySelector('.join-team-text');
+const tourText = document.querySelector('.tour-text');
+
+const lobbyBtns = document.querySelector('.lobby-btns');
+const startTourBtn = document.querySelector('.start-tour-btn');
 const startGameBtn = document.querySelector('.start-btn');
+const nextPlayerBtn = document.querySelector('.next-player-btn');
+const opponentBtn = document.querySelector('.opponent-btn');
 
 const scoreAreas = document.querySelectorAll('.score');
 const timeDiv = document.querySelector('.time')
 
+const card = document.querySelector('.card-div');
 const cardHeader = document.querySelector('.card-header');
 const cardWordsArea = document.querySelector('.card-words');
 
@@ -56,6 +65,7 @@ const joinLobbyBtn = document.querySelector('.join-lobby-btn');
 
 const joinTeamBtns = document.querySelectorAll('.join-team-btn');
 
+const cardBtns = document.querySelectorAll('.btn');
 const correctBtn = document.querySelector('.correct-btn');
 const skipBtn = document.querySelector('.skip-btn');
 const faulBtn = document.querySelector('.faul-btn');
@@ -238,6 +248,9 @@ class Lobby {
     password = "";
     admin = "admin";
 
+    tour = 0;
+    goal = 18;
+
     players = [];
 
     teams = [
@@ -259,7 +272,11 @@ class Lobby {
     gameTime = 120;
     currentTime = 120;
 
+    skipCount = 3;
+
     isGameOn = false;
+
+    isTimerOn = false;
 
     usedIndexes = [];
 }
@@ -268,9 +285,19 @@ const lobby = new Lobby();
 
 class Game {
     username = null;
+    userIndex = null;
     team = null;
     enemyTeam = 0;
 
+    isUserPlaying = false;
+
+    FPS = 1;
+
+    timerInterval;
+
+    addExtraZero = (x) => {
+        return x < 10 ? "0" + x : x;
+    }
 
     initGameContainer = () => {
         gameContainer.style.display = "flex";
@@ -318,10 +345,13 @@ class Game {
 
             this.initGameContainer();
 
-            if(this.username == lobby.admin) {
+            if(this.userIndex == lobby.currentPlayingIndex && this.team == lobby.currentPlayingTeam) {
                 startGameBtn.style.display = "flex";
+                lobbyText.style.display = "none";
+
             } else {
                 startGameBtn.style.display = "none";
+                lobbyText.style.display = "flex";
             }
 
             this.updateDatabase();
@@ -337,9 +367,15 @@ class Game {
         let blueCount = 5 - lobby.teams[1].players.length;
 
         lobby.teams.map((team, index) => {
-            team.players.map((player) => {
+            team.players.map((player, playerIndex) => {
                 let div = document.createElement('div');
                 div.className = "player-div";
+
+                if(index == lobby.currentPlayingTeam && playerIndex == lobby.currentPlayingIndex) {
+                    div.classList.add('active-player');
+                } else {
+                    div.classList.remove('active-player');
+                }
 
                 if(index == 0) {
                     div.classList.add('red-player-div');
@@ -381,6 +417,12 @@ class Game {
 
             blueBoxArea.appendChild(div);
         }
+
+        if(lobby.isGameOn) {
+            joinTeamBtns.forEach((btn) => {
+                btn.classList.add("disabled-btn");
+            })
+        }
     }
 
     joinTeam = (e) => {
@@ -396,6 +438,7 @@ class Game {
             if(this.team != joiningTeam && lobby.teams[joiningTeam].players.length < 5) {
                 this.team = joiningTeam;
                 lobby.teams[joiningTeam].players.push(this.username);
+                this.userIndex = lobby.teams[joiningTeam].players.length - 1;
 
                 lobby.teams[this.enemyTeam].players.map((player, index) => {
                     if(player == this.username) {
@@ -405,8 +448,15 @@ class Game {
 
                 joinTeamBtns[this.enemyTeam].classList.remove('disabled-btn');
                 joinTeamBtns[joiningTeam].classList.add('disabled-btn');
+
+                joinTeamText.style.display = "none";
             } else {
                 joinLobbyBtn[joiningTeam].classList.add('disabled-btn');
+            }
+
+            if(this.userIndex == lobby.currentPlayingIndex && this.team == lobby.currentPlayingTeam) {
+                lobbyText.style.display = "none";
+                lobbyBtns.style.display = "flex";
             }
 
             this.updateDatabase();
@@ -422,14 +472,23 @@ class Game {
             players: lobby.players,
             currentPlayingTeam: lobby.currentPlayingTeam,
             currentPlayingIndex: lobby.currentPlayingIndex,
-            isGameOn: lobby.isGameOn,
-            currentTime: lobby.currentTime,
+            isGameOn: false,
             gameTime: lobby.gameTime,
-        }
+            tour: lobby.tour,
+            skipCount: lobby.skipCount,
+        };
 
         if(lobby.usedIndexes) {
             configurations.usedIndexes = lobby.usedIndexes;
-            configurations.currentWordIndex = lobby.currentWordIndex;
+
+            if(this.team == lobby.currentPlayingTeam && this.userIndex == lobby.currentPlayingIndex) {
+                configurations.currentWordIndex = lobby.currentWordIndex;
+            }
+        };
+
+        if(this.team == lobby.currentPlayingTeam && this.userIndex == lobby.currentPlayingIndex) {
+            configurations.currentTime = lobby.currentTime || 120;
+            configurations.isGameOn = lobby.isGameOn;
         }
 
         set(ref(db, "Game/Lobby"), configurations).catch((err) => {
@@ -439,18 +498,61 @@ class Game {
 
     updateCard = () => {
         if(lobby.isGameOn) {
+            get(ref(db, "Game/Lobby")).then((snapshot) => {
+                lobby.currentWordIndex = snapshot.val().currentWordIndex;
+            })
+
             let word = words.words[lobby.currentWordIndex];
+            card.style.display = "flex";
 
             cardHeader.textContent = word.word;
             cardWordsArea.innerHTML = ``;
 
-            word.tabuuWords.map((word) => {
-                let div = document.createElement('div');
-                div.className = "card-word";
+            if(this.team == lobby.currentPlayingTeam && this.userIndex != lobby.currentPlayingIndex) {
+                cardHeader.textContent = `****`;
 
-                div.textContent = word;
+                for(let x = 0; x < 5; x++) {
+                    let div = document.createElement('div');
+                    div.className = "card-word";
+                    div.textContent = `****`;
+                    cardWordsArea.appendChild(div);
+                }
 
-                cardWordsArea.appendChild(div);
+                cardBtns.forEach((btn) => {
+                    btn.style.display = "none";
+                });
+            } else if(this.team != lobby.currentPlayingTeam) {
+                cardBtns.forEach((btn) => {
+                    btn.style.display = "none";
+                });
+
+                word.tabuuWords.map((word) => {
+                    let div = document.createElement('div');
+                    div.className = "card-word";
+
+                    div.textContent = word;
+
+                    cardWordsArea.appendChild(div);
+                });
+            } else if (this.team == lobby.currentPlayingTeam && this.userIndex == lobby.currentPlayingIndex) {
+                cardBtns.forEach((btn) => {
+                    btn.style.display = "flex";
+                });
+
+                word.tabuuWords.map((word) => {
+                    let div = document.createElement('div');
+                    div.className = "card-word";
+
+                    div.textContent = word;
+
+                    cardWordsArea.appendChild(div);
+                });
+            }
+        } else {
+            card.style.display = "none";
+
+            cardBtns.forEach((btn) => {
+                btn.style.display = "none";
             });
         }
     }
@@ -462,9 +564,11 @@ class Game {
             lobby.currentPlayingTeam = result.currentPlayingTeam;
             lobby.players = result.players;
             lobby.teams = result.teams;
-            lobby.currentTime = result.currentTime;
+            lobby.currentTime = result.currentTime || 20;
             lobby.usedIndexes = result.usedIndexes;
             lobby.currentWordIndex = result.currentWordIndex;
+            lobby.isGameOn = result.isGameOn;
+            lobby.tour = result.tour;
 
 
             if(!lobby.players) {
@@ -473,6 +577,11 @@ class Game {
 
             if(!lobby.teams[0].players) {
                 lobby.teams[0].players = [];
+            }
+
+            if(lobby.isGameOn) {
+                containerMid.style.display = "flex";
+                lobbyMid.style.display = "none";
             }
 
             if(!lobby.teams[1].players) {
@@ -498,11 +607,23 @@ class Game {
             });
         });
 
+        lobby.isGameOn = false;
+
+        lobby.usedIndexes = [];
+        lobby.currentWordIndex = null;
+        lobby.currentTime = 120;
+        lobby.currentPlayingIndex = 0;
+        lobby.currentPlayingTeam = 0;
+
         this.updateDatabase();
     }
 
     nextWord = () => {
         let randomNumber;
+
+        if(!lobby.usedIndexes) {
+            lobby.usedIndexes = [];
+        }
 
         do{
             randomNumber = Math.floor(Math.random() * words.words.length);
@@ -525,8 +646,138 @@ class Game {
 
             cardWordsArea.appendChild(div);
         });
+        this.updateDatabase();
+    }
+
+    startGame = () => {
+        lobby.isGameOn = true;
+        lobby.isTimerOn = true;
+        lobbyBtns.style.display = "none";
+
+        this.isUserPlaying = false;
+
+        if(this.userIndex == lobby.currentPlayingIndex && this.team == lobby.currentPlayingTeam) {
+            this.isUserPlaying = true;
+        }
+
+        if(this.userIndex == lobby.currentPlayingIndex && this.team == lobby.currentPlayingTeam) {
+            this.timerInterval = setInterval(() => {
+                if(lobby.currentTime > 0 && lobby.isTimerOn && this.userIndex == lobby.currentPlayingIndex && this.team == lobby.currentPlayingTeam) {
+                    lobby.currentTime--;
+                }
+
+                if(lobby.currentTime == 0) {
+                    this.endTour();
+                }
+
+                this.updateDatabase();
+            }, 1000);
+
+            this.nextWord();
+        }
 
         this.updateDatabase();
+    }
+
+    updateTimer = () => {
+        get(ref(db, "Game/Lobby")).then((snapshot) => {
+            lobby.currentTime = snapshot.val().currentTime;
+        });
+
+        timeDiv.textContent = `${this.addExtraZero(Math.floor(lobby.currentTime / 60))}:${this.addExtraZero(Math.floor(lobby.currentTime % 60))}`;
+    }
+
+    updateLobby = () => {
+        if(this.userIndex == lobby.currentPlayingIndex && this.team == lobby.currentPlayingTeam && lobby.tour == 0) {
+            lobbyBtns.style.display = "flex";
+            startGameBtn.style.display = "flex";
+            lobbyText.style.display = "none";
+        } else {
+            lobbyBtns.style.display = "none";
+            lobbyText.style.display = "flex";
+        }
+    }
+
+    endTour = () => {
+        lobby.isTimerOn = false;
+        lobby.currentTime = 120;
+        lobby.skipCount = 3;
+        lobby.isGameOn = false;
+
+        lobby.tour += 1;
+
+        if(lobby.currentPlayingTeam == 0) {
+            lobby.currentPlayingTeam = 1;
+        } else {
+            lobby.currentPlayingIndex += 1;
+            lobby.currentPlayingTeam = 0;
+        }
+
+
+        set(ref(db, "Game/Lobby/currentPlayingTeam"), lobby.currentPlayingTeam);
+        set(ref(db, "Game/Lobby/currentPlayingIndex"), lobby.currentPlayingIndex);
+        set(ref(db, "Game/Lobby/isGameOn"), lobby.isGameOn);
+
+        card.style.display = "none";
+
+        if(this.userIndex == lobby.currentPlayingIndex && this.team == lobby.currentPlayingTeam) {
+            startTourBtn.style.display = "flex";
+            tourText.style.display = "none"
+        } else {
+            startTourBtn.style.display = "none";
+            tourText.style.display = "flex"
+        }
+
+        this.updateDatabase();
+    }
+
+    updateScoreBoard = () => {
+        scoreAreas[0].textContent = lobby.teams[0].score;
+        scoreAreas[1].textContent = lobby.teams[1].score;
+    }
+
+    invite = () => {
+        let URL = location.href;
+        navigator.clipboard.writeText(URL);
+        inviteModal.style.transform = "translateY(0)";
+        inviteModal.textContent = "Davet linki kopyalandı!";
+
+        setTimeout(() => {
+            inviteModal.style.transform = "translateY(-128px)";
+        }, 2000);
+    }
+
+    correct = () => {
+        lobby.teams[lobby.currentPlayingTeam].score += 1;
+        this.updateScoreBoard();
+
+        this.nextWord();
+    }
+
+    skip = () => {
+        if(lobby.skipCount > 0) {
+
+            lobby.skipCount -= 1;
+
+            skipBtn.textContent = `PAS (${lobby.skipCount})`;
+
+            this.nextWord();
+
+            if(lobby.skipCount == 0) {
+                skipBtn.classList.add('disabled-btn');
+            }
+        }
+    }
+
+    faul = () => {
+        lobby.teams[lobby.currentPlayingTeam].score -= 1;
+        this.updateScoreBoard();
+
+        this.nextWord();
+    }
+
+    startTour = () => {
+
     }
 }
 
@@ -536,14 +787,43 @@ joinLobbyBtn.addEventListener('click', game.joinLobby);
 
 headerTitle.textContent = lobby.title + " Lobisi";
 
-setInterval(game.updateBoxes, 1000);
-setInterval(game.updateCard, 1000);
-setInterval(game.updateFromDatabase, 1000);
+setInterval(game.updateCard, 1000 / game.FPS);
+setInterval(game.updateBoxes, 1000 / game.FPS);
+setInterval(game.updateTimer, 1000 / game.FPS);
+setInterval(game.updateScoreBoard, 1000 / game.FPS);
+setInterval(game.updateLobby, 1000 / game.FPS);
+setInterval(game.updateFromDatabase, 1000 / game.FPS);
 
 joinTeamBtns.forEach((btn) => {
     btn.addEventListener('click', game.joinTeam);
 });
 
-
 // CHECK IS USER CLOSED WINDOW
 window.addEventListener('beforeunload', game.removeUser);
+
+startGameBtn.addEventListener('click', game.startGame);
+inviteBtn.addEventListener('click', game.invite);
+
+nextPlayerBtn.addEventListener('click', () => {
+    if(lobby.currentPlayingIndex < 4 && lobby.currentPlayingIndex < (lobby.teams[game.team].players.length - 1)) {
+        lobby.currentPlayingIndex++;
+    } else {
+        lobby.currentPlayingIndex = 0;
+    }
+
+    game.updateDatabase();
+});
+
+opponentBtn.addEventListener('click', () => {
+    lobby.currentPlayingTeam = game.enemyTeam;
+    lobby.currentPlayingIndex = 0;
+
+    game.updateDatabase();
+});
+
+
+// EMOJILI IFADE EKLEME KOY!!!
+
+correctBtn.addEventListener('click', game.correct);
+skipBtn.addEventListener('click', game.skip);
+faulBtn.addEventListener('click', game.faul);

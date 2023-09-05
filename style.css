@@ -85,7 +85,7 @@ height: 64px;
 display: flex;
 justify-content: center;
 align-items: center;
-text-shadow: 0px 0px 8px #000;
+text-shadow: 4px 4px 4px #000;
 }
 
 .red-team .team-title {
@@ -101,7 +101,7 @@ background-color: var(--filteredRed);
 }
 
 .blue-player-div {
-background-color: var(--blue);
+background-color: var(--filteredBlue);
 }
 
 .player-div {
@@ -326,8 +326,8 @@ align-items: center;
     margin-top: 4px;
 }
 
-.start-btn {
-    width: 190px;
+.lobby-btn {
+    width: 128px;
     height: 48px;
     background-color: var(--yellow);
     display: flex;
@@ -338,15 +338,20 @@ align-items: center;
     font-family: myFont;
     cursor: pointer;
     transition: 250ms;
-    font-size: 20px;
+    font-size: 16px;
+    margiN: auto 4px;
 }
 
-.start-btn:hover {
+.opponent-btn {
+    background-color: var(--red);
+}
+
+.lobby-btn:hover {
     background-color: var(--scoreBlue);
     color: #fff;
 }
 
-.start-btn div {
+.lobby-btn div {
     margin-top: 4px;
 }
 
@@ -439,6 +444,11 @@ label {
     font-family: myFont;
     border-radius: 4px;
     box-shadow: 0 0 8px #000;
+    transition: 250ms;
+}
+
+.input:focus {
+    transform: scale(1.07);
 }
 
 .start-box-footer {
@@ -603,4 +613,30 @@ label {
 .turn-back-lobbies-btn:hover {
     color: #fff;
     transform: scale(1.2);
+}
+
+.active-player {
+    transition: 250ms;
+    transform: scale(1.05);
+}
+
+.red-team .active-player {
+    background-color: var(--red);
+}
+
+.blue-team .active-player {
+    background-color: var(--blue);
+}
+
+.start-tour-btn {
+    display: none;
+}
+
+.lobby-text, .join-team-text, .tour-text {
+    font-size: 24px;
+    color: #fff;
+    font-family: myFont;
+    margin-top: 24px;
+    text-shadow: 4px 4px 4px #000;
+    display: none;
 }
